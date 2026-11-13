@@ -1,0 +1,19 @@
+{
+  "battle": "/api/battles/:battleId",
+  "bracket": "/api/battles/:battleId/bracket",
+  "nextMatch": "/api/battles/:battleId/next-match",
+  "join": "/api/battles/:battleId/join",
+  "vote": "/api/matches/:matchId/vote",
+  "adminLogin": "/api/admin/login",
+  "adminMe": "/api/admin/me",
+  "adminBattles": "/api/admin/battles",
+  "adminBattle": "/api/admin/battles/:battleId",
+  "adminPhotos": "/api/admin/battles/:battleId/photos",
+  "adminPhoto": "/api/admin/battles/:battleId/photos/:photoId",
+  "adminRemovePhoto": "/api/admin/battles/:battleId/photos/:photoId/remove",
+  "adminStart": "/api/admin/battles/:battleId/start",
+  "adminFinishRound": "/api/admin/battles/:battleId/finish-round",
+  "adminNextRound": "/api/admin/battles/:battleId/next-round",
+  "adminStop": "/api/admin/battles/:battleId/stop",
+  "adminQr": "/api/admin/battles/:battleId/qr.svg"
+}

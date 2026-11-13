@@ -1,0 +1,49 @@
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
+
+from sqlalchemy import DateTime, Engine, create_engine, event
+from sqlalchemy.engine import make_url
+from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.types import TypeDecorator
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+class UTCDateTime(TypeDecorator[datetime]):
+    """Хранит время в UTC и всегда возвращает его с часовым поясом, в том числе из SQLite."""
+
+    impl = DateTime(timezone=True)
+    cache_ok = True
+
+    def process_bind_param(self, value: datetime | None, dialect: Any) -> datetime | None:
+        if value is None:
+            return None
+        return value.astimezone(UTC)
+
+    def process_result_value(self, value: datetime | None, dialect: Any) -> datetime | None:
+        if value is None:
+            return None
+        if value.tzinfo is None:
+            return value.replace(tzinfo=UTC)
+        return value.astimezone(UTC)
+
+
+def _sqlite_foreign_keys(dbapi_connection: Any, connection_record: Any) -> None:
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
+
+
+def make_engine(url: str) -> Engine:
+    parsed = make_url(url)
+    if parsed.get_backend_name() != "sqlite":
+        return create_engine(url, pool_pre_ping=True)
+    if parsed.database and parsed.database != ":memory:":
+        Path(parsed.database).parent.mkdir(parents=True, exist_ok=True)
+    # Запросы идут из пула потоков FastAPI и из фоновой задачи.
+    engine = create_engine(url, connect_args={"check_same_thread": False})
+    event.listen(engine, "connect", _sqlite_foreign_keys)
+    return engine

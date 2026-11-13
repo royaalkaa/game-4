@@ -1,0 +1,10 @@
+{
+  "home": "/",
+  "join": "/join/:battleId",
+  "battle": "/b/:battleId",
+  "bracket": "/b/:battleId/bracket",
+  "results": "/b/:battleId/results",
+  "screen": "/screen/:battleId",
+  "admin": "/admin",
+  "adminBattle": "/admin/battles/:battleId"
+}
