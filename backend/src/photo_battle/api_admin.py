@@ -1,3 +1,4 @@
+import contextlib
 import secrets
 from datetime import datetime, timedelta
 from io import BytesIO
@@ -78,19 +79,23 @@ def login(
     state = request.app.state
     client = _client_key(request)
     now = clock.now()
+    # Попытка записывается как неудачная до проверки пароля: иначе параллельные
+    # запросы проходят лимит раньше, чем запишется первая неудача.
     with state.login_lock:
         recent = [t for t in state.login_failures.get(client, []) if now - t < LOGIN_WINDOW]
-        state.login_failures[client] = recent
         if len(recent) >= LOGIN_MAX_FAILURES:
+            state.login_failures[client] = recent
             log.warning("admin_login_throttled")
             raise ApiError(
                 429, "too_many_attempts", "Слишком много попыток входа. Подождите 10 минут."
             )
+        recent.append(now)
+        state.login_failures[client] = recent
     if not verify_admin_password(body.password, settings.admin_password_hash.get_secret_value()):
-        with state.login_lock:
-            state.login_failures.setdefault(client, []).append(now)
         log.warning("admin_login_failed")
         raise ApiError(401, "bad_password", "Неверный пароль.")
+    with state.login_lock, contextlib.suppress(ValueError):
+        state.login_failures.get(client, []).remove(now)
     token = new_token()
     db.add(
         AdminSession(
@@ -250,13 +255,25 @@ def start_battle(battle_id: int, request: Request, db: DbSession) -> dict[str, A
     return _admin_view(request, db, battle)
 
 
+class FinishRoundIn(BaseModel):
+    round: int = Field(ge=1)
+
+
 @router.post("/battles/{battle_id}/finish-round")
-def finish_round(battle_id: int, request: Request, db: DbSession) -> dict[str, Any]:
+def finish_round(
+    battle_id: int, body: FinishRoundIn, request: Request, db: DbSession
+) -> dict[str, Any]:
     battle = _admin_battle(db, battle_id)
     with game.LOCK:
         db.refresh(battle)
-        if battle.status != BattleStatus.ACTIVE or battle.round_state != RoundState.RUNNING:
-            raise ApiError(409, "round_not_running", "Сейчас нет идущего раунда.")
+        # Номер раунда из запроса защищает от закрытия следующего раунда, который
+        # автостарт запустил, пока ведущий подтверждал закрытие предыдущего.
+        if (
+            battle.status != BattleStatus.ACTIVE
+            or battle.round_state != RoundState.RUNNING
+            or battle.current_round != body.round
+        ):
+            raise ApiError(409, "round_not_running", "Этот раунд уже закончился.")
         game.close_round(db, battle, clock.now())
         db.commit()
     return _admin_view(request, db, battle)

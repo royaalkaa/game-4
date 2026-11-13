@@ -4,7 +4,7 @@ import { EyeOff, Trophy } from 'lucide-react';
 import { apiUrl } from '@/shared/api';
 import { HALL_POLL_MS, QR_REFRESH_MS, routePaths } from '@/shared/config';
 import { clockOffsetMs, useNow, usePolling } from '@/shared/lib';
-import { ButtonLink, PhotoFrame, StateView } from '@/shared/ui';
+import { ButtonLink, PhotoFrame, StaleBanner, StateView } from '@/shared/ui';
 import { BattleHeader, getAdminBattle } from '@/entities/battle';
 import { DuelTile } from './DuelTile';
 
@@ -94,6 +94,7 @@ export function ScreenPage() {
 
   return (
     <Hall>
+      {error && <StaleBanner message={error.message} />}
       <div className="grid grid-cols-[440px_1fr] gap-10">
         <aside className="flex flex-col items-center gap-4 text-center">
           <img src={qrSrc} alt="QR-код для входа в голосование" className="w-full rounded-2xl bg-qr p-4" />
@@ -102,10 +103,10 @@ export function ScreenPage() {
         </aside>
         <section className="flex flex-col gap-8">
           <BattleHeader large battle={battle} offsetMs={offsetMs} />
-          {battle.frozen && (
+          {battle.round_state === 'running' && (
             <p className="inline-flex items-center gap-3 text-4xl font-semibold">
               <EyeOff aria-hidden size={40} />
-              Счёт скрыт до конца раунда
+              Счёт откроется в конце раунда
             </p>
           )}
           {isBreak && <h2 className="text-5xl font-bold">Раунд окончен. Результаты</h2>}
@@ -117,7 +118,9 @@ export function ScreenPage() {
                 <DuelTile
                   key={match.id}
                   match={match}
-                  hideScore={battle.frozen}
+                  // The hall sees the score only after the duel ends, otherwise guests who
+                  // have not voted yet follow the leader.
+                  hideScore={match.status !== 'finished'}
                   compact={roundMatches.length > 2}
                 />
               ))}

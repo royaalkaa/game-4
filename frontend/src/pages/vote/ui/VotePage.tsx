@@ -4,7 +4,7 @@ import { Network, Trophy } from 'lucide-react';
 import { asApiError, type ApiError, type Match } from '@/shared/api';
 import { routePaths, VOTE_RESULT_MS, VOTER_POLL_MS } from '@/shared/config';
 import { clockOffsetMs, usePolling } from '@/shared/lib';
-import { Button, ButtonLink, Page, PhotoFrame, StateView } from '@/shared/ui';
+import { Button, ButtonLink, Page, PhotoFrame, StaleBanner, StateView } from '@/shared/ui';
 import { BattleHeader, getBattle, getBracket } from '@/entities/battle';
 import { MatchCard } from '@/entities/match';
 import { DuelVote, getNextMatch, VoteResult } from '@/features/vote';
@@ -61,7 +61,20 @@ export function VotePage() {
     return () => clearTimeout(timer);
   }, [lastVote]);
 
-  const reloadNext = useCallback(() => setNext(undefined), []);
+  // A late vote must not look accepted, so the page says it was refused and re-reads the round.
+  const [lateRound, setLateRound] = useState<number | null>(null);
+  const { refresh } = polling;
+  const reloadNext = useCallback(
+    (code: string) => {
+      if (code === 'match_closed') {
+        setLateRound(round);
+        refresh();
+      }
+      setNext(undefined);
+    },
+    [round, refresh],
+  );
+  const lateVote = lateRound !== null && lateRound === round;
 
   const view = selectVoteView({
     battle,
@@ -104,6 +117,12 @@ export function VotePage() {
   return (
     <Page>
       <BattleHeader battle={battle} offsetMs={polling.data.offsetMs} />
+      {polling.error && <StaleBanner message={polling.error.message} />}
+      {lateVote && view.kind !== 'duel' && view.kind !== 'result' && (
+        <p role="status" className="text-danger">
+          Голос не принят: дуэль уже закрыта.
+        </p>
+      )}
       {view.kind === 'loading' && <StateView kind="loading" title="Ищем дуэль для тебя" />}
       {view.kind === 'error' && (
         <StateView
@@ -135,7 +154,11 @@ export function VotePage() {
       )}
       {view.kind === 'result' && <VoteResult match={view.match} />}
       {view.kind === 'all_voted' && (
-        <StateView kind="empty" title="Ты проголосовал во всех дуэлях раунда" action={bracketLink} />
+        <StateView
+          kind="empty"
+          title={lateVote ? 'В этом раунде больше не за что голосовать' : 'Ты проголосовал во всех дуэлях раунда'}
+          action={bracketLink}
+        />
       )}
       {view.kind === 'break' && (
         <section aria-label="Результаты раунда" className="flex flex-col gap-4">

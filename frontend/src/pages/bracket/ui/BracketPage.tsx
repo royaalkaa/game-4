@@ -3,7 +3,7 @@ import { generatePath, useParams } from 'react-router';
 import { ArrowLeft } from 'lucide-react';
 import { routePaths, VOTER_POLL_MS } from '@/shared/config';
 import { clockOffsetMs, usePolling } from '@/shared/lib';
-import { Button, ButtonLink, Page, StateView } from '@/shared/ui';
+import { Button, ButtonLink, Page, StaleBanner, StateView } from '@/shared/ui';
 import { BattleHeader, getBattle, getBracket } from '@/entities/battle';
 import { BracketView } from '@/widgets/bracket';
 
@@ -37,6 +37,7 @@ export function BracketPage() {
         <ArrowLeft aria-hidden size={18} />К батлу
       </ButtonLink>
       <BattleHeader battle={battle} offsetMs={offsetMs} />
+      {error && <StaleBanner message={error.message} />}
       {battle.total_rounds === null || bracket.rounds.length === 0 ? (
         <StateView kind="empty" title="Сетка появится после запуска батла" />
       ) : (

@@ -1,3 +1,5 @@
+import threading
+
 import pytest
 from fastapi.testclient import TestClient
 from helpers import ADMIN_HASH, ADMIN_SECRET, create_battle
@@ -21,6 +23,30 @@ def test_login_throttled_after_five_failures(guest) -> None:
     response = guest.post("/api/admin/login", json={"password": ADMIN_SECRET})
     assert response.status_code == 429
     assert error_code(response) == "too_many_attempts"
+
+
+def test_parallel_logins_do_not_bypass_limit(guest) -> None:
+    barrier = threading.Barrier(10)
+    codes: list[int] = []
+
+    def attempt() -> None:
+        barrier.wait()
+        codes.append(guest.post("/api/admin/login", json={"password": "wrong"}).status_code)
+
+    threads = [threading.Thread(target=attempt) for _ in range(10)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    assert codes.count(401) == 5
+    assert codes.count(429) == 5
+
+
+def test_successful_login_is_not_counted_as_failure(guest) -> None:
+    for _ in range(4):
+        guest.post("/api/admin/login", json={"password": "wrong"})
+    assert guest.post("/api/admin/login", json={"password": ADMIN_SECRET}).status_code == 200
+    assert guest.post("/api/admin/login", json={"password": "wrong"}).status_code == 401
 
 
 def test_failures_expire_after_ten_minutes(guest, fake_clock) -> None:

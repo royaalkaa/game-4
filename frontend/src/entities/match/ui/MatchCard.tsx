@@ -37,7 +37,7 @@ export function MatchCard({ match, photoAction }: MatchCardProps) {
               <p className="w-full truncate text-sm">{label}</p>
               {photoAction?.(photo)}
             </div>
-            {votes !== null && <span className="text-lg font-semibold tabular-nums">{votes}</span>}
+            {votes !== null && match.decided_by !== 'bye' && <span className="text-lg font-semibold tabular-nums">{votes}</span>}
             {winner && <Trophy aria-label="Победитель" size={18} className="shrink-0 text-primary" />}
           </div>
         );

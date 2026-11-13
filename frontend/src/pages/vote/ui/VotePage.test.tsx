@@ -104,6 +104,21 @@ describe('VotePage', () => {
     expect(await screen.findByText('Этого фото нет в дуэли')).toBeInTheDocument();
   });
 
+  it('says a late vote was not accepted instead of claiming every duel is voted', async () => {
+    const match = makeMatch({ id: 5 });
+    let nextCalls = 0;
+    mockFetch({
+      [battleUrl]: () => json(makeBattle()),
+      [nextUrl]: () => json({ match: nextCalls++ === 0 ? match : null }),
+      [`POST ${apiUrl('vote', { matchId: 5 })}`]: () => apiError(409, 'match_closed', 'Дуэль закрыта'),
+    });
+    renderVote();
+    await userEvent.click(await screen.findByRole('button', { name: 'Выбрать: Фото 1' }));
+    expect(await screen.findByText('Голос не принят: дуэль уже закрыта.')).toBeInTheDocument();
+    expect(screen.getByText('В этом раунде больше не за что голосовать')).toBeInTheDocument();
+    expect(screen.queryByText('Ты проголосовал во всех дуэлях раунда')).not.toBeInTheDocument();
+  });
+
   it('says all duels are voted and links to the bracket', async () => {
     mockFetch({ [battleUrl]: () => json(makeBattle()), [nextUrl]: () => json({ match: null }) });
     renderVote();

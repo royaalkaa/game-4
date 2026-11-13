@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { generatePath } from 'react-router';
 import { describe, expect, it } from 'vitest';
@@ -140,6 +140,21 @@ describe('AdminBattlePage', () => {
     const dialog = screen.getByRole('dialog', { name: 'Снять фото?' });
     await userEvent.click(within(dialog).getByRole('button', { name: 'Снять фото' }));
     expect(removed).toBe(true);
+  });
+
+  it('finishes the round shown on screen by sending its number', async () => {
+    const fetchMock = mockFetch({
+      [battleKey]: () => json(makeAdminBattle()),
+      [`POST ${apiUrl('adminFinishRound', { battleId: 1 })}`]: () => json(makeAdminBattle({ round_state: 'break' })),
+    });
+    renderPage();
+    await userEvent.click(await screen.findByRole('button', { name: 'Закончить раунд сейчас' }));
+    const dialog = await screen.findByRole('dialog');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Закончить раунд сейчас' }));
+    await waitFor(() => {
+      const call = fetchMock.mock.calls.find(([, init]) => init?.method === 'POST');
+      expect(call?.[1]?.body).toBe('{"round":1}');
+    });
   });
 
   it('starts the next round from the break without a dialog', async () => {

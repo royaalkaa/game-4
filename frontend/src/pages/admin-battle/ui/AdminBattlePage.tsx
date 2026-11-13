@@ -53,6 +53,7 @@ export function AdminBattlePage() {
 
   const { battle, offsetMs } = data;
   const active = battle.status === 'active';
+  const runningRound = battle.round_state === 'running' ? battle.current_round : null;
 
   return (
     <Page>
@@ -107,15 +108,17 @@ export function AdminBattlePage() {
                 onDone={refresh}
               />
             )}
-            {battle.round_state === 'running' && (
+            {runningRound !== null && (
               <ActionButton
+                // A new round remounts the button, so an open dialog never closes the next round.
+                key={`finish-${runningRound}`}
                 label="Закончить раунд сейчас"
                 icon={<Square aria-hidden size={18} />}
                 confirm={{
                   title: 'Закончить раунд сейчас?',
                   message: 'Голосование в раунде закроется, победители дуэлей определятся по текущему счёту.',
                 }}
-                action={() => finishRound(battleId)}
+                action={() => finishRound(battleId, runningRound)}
                 onDone={refresh}
               />
             )}

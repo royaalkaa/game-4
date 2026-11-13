@@ -115,6 +115,6 @@ def test_caption_hidden_from_guests_until_match_finished(admin, guest) -> None:
     admin_match = admin.get(f"/api/admin/battles/{battle_id}").json()["bracket"]["rounds"][0]
     assert admin_match["matches"][0]["photo_a"]["caption"].startswith("Автор")
 
-    admin.post(f"/api/admin/battles/{battle_id}/finish-round")
+    admin.post(f"/api/admin/battles/{battle_id}/finish-round", json={"round": 1})
     rounds = guest.get(f"/api/battles/{battle_id}/bracket").json()["rounds"]
     assert rounds[0]["matches"][0]["photo_a"]["caption"].startswith("Автор")

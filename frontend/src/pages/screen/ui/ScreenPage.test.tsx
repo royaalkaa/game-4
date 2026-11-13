@@ -42,24 +42,37 @@ describe('ScreenPage', () => {
     expect(await screen.findByText('Батл ещё не запущен')).toBeInTheDocument();
   });
 
-  it('shows the QR, header and live scores with shares', async () => {
+  it('shows the QR and header and hides the score of running duels even though the admin API returns it', async () => {
     mockFetch({ [battleKey]: () => json(makeAdminBattle()) });
     renderScreen();
     const qr = await screen.findByRole('img', { name: 'QR-код для входа в голосование' });
     expect(qr.getAttribute('src')).toMatch(new RegExp(`^${apiUrl('adminQr', { battleId: 1 })}\\?t=\\d+$`));
     expect(screen.getByText('Раунд 1 из 2')).toBeInTheDocument();
     expect(screen.getByText('Зрителей: 42')).toBeInTheDocument();
-    const duel = screen.getByTestId('duel-11');
+    expect(screen.getByText('Счёт откроется в конце раунда')).toBeInTheDocument();
+    expect(screen.getAllByText('Счёт скрыт')).toHaveLength(2);
+    expect(within(screen.getByTestId('duel-11')).getByText('Голосов: 10')).toBeInTheDocument();
+    expect(screen.queryByText('70%')).not.toBeInTheDocument();
+  });
+
+  it('shows the score with shares once a duel is finished', async () => {
+    const battle = makeAdminBattle({ round_state: 'break' });
+    for (const match of battle.bracket.rounds.flatMap((round) => round.matches)) match.status = 'finished';
+    mockFetch({ [battleKey]: () => json(battle) });
+    renderScreen();
+    const duel = await screen.findByTestId('duel-11');
     expect(within(duel).getByText('70%')).toBeInTheDocument();
     expect(within(duel).getByText('30%')).toBeInTheDocument();
   });
 
-  it('hides the score during the freeze even though the admin API returns it', async () => {
-    mockFetch({ [battleKey]: () => json(makeAdminBattle({ frozen: true })) });
+  it('shows a stale banner when polling fails after data was loaded', async () => {
+    let calls = 0;
+    mockFetch({
+      [battleKey]: () => (calls++ === 0 ? json(makeAdminBattle()) : apiError(0, 'network_error', 'Нет сети')),
+    });
     renderScreen();
-    expect(await screen.findByText('Счёт скрыт до конца раунда')).toBeInTheDocument();
-    expect(screen.getAllByText('Счёт скрыт')).toHaveLength(2);
-    expect(screen.queryByText('70%')).not.toBeInTheDocument();
+    expect(await screen.findByText(/Нет связи с сервером/, {}, { timeout: 4000 })).toBeInTheDocument();
+    expect(screen.getByText('Раунд 1 из 2')).toBeInTheDocument();
   });
 
   it('shows round results during the break', async () => {

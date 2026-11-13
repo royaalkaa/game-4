@@ -10,7 +10,7 @@ const STALE_CODES = new Set(['already_voted', 'match_closed', 'not_joined']);
 interface DuelVoteProps {
   match: Match;
   onVoted: (result: Match) => void;
-  onStale: () => void;
+  onStale: (code: string) => void;
 }
 
 export function DuelVote({ match, onVoted, onStale }: DuelVoteProps) {
@@ -26,7 +26,7 @@ export function DuelVote({ match, onVoted, onStale }: DuelVoteProps) {
     } catch (caught) {
       const apiError = asApiError(caught);
       if (STALE_CODES.has(apiError.code)) {
-        onStale();
+        onStale(apiError.code);
         return;
       }
       setError(apiError.message);
@@ -37,12 +37,13 @@ export function DuelVote({ match, onVoted, onStale }: DuelVoteProps) {
   return (
     <section aria-label="Дуэль" className="flex flex-col gap-4">
       <p className="text-sm text-muted">Проголосовало: {match.total_votes}</p>
-      <div className="grid gap-6 md:grid-cols-2">
+      {/* Both photos and both buttons fit on one phone screen without scrolling. */}
+      <div className="grid gap-4 md:grid-cols-2 md:gap-6">
         {photos.map((photo, index) => {
           const label = photoLabel(photo, index === 0 ? 1 : 2);
           return (
-            <figure key={photo.id} className="flex flex-col gap-3">
-              <PhotoFrame src={photo.url} alt={label} className="h-[38svh] w-full md:h-[60vh]" />
+            <figure key={photo.id} className="flex flex-col gap-2 md:gap-3">
+              <PhotoFrame src={photo.url} alt={label} className="h-[26svh] w-full md:h-[60vh]" />
               {photo.caption && <figcaption className="text-center">{photo.caption}</figcaption>}
               <Button
                 variant="primary"

@@ -93,7 +93,7 @@ interface Bracket { rounds: { round: number; matches: Match[] }[] }
 | `POST /api/admin/battles/{id}/photos` | multipart: `file`, `caption` (необязательно) | `Photo` | 400 `bad_image`, 413 `too_large`, 409 `not_draft`, 409 `too_many_photos` |
 | `DELETE /api/admin/battles/{id}/photos/{photo_id}` | | `{"ok": true}` | 409 `not_draft` |
 | `POST /api/admin/battles/{id}/start` | | `AdminBattle` | 409 `not_draft`, 409 `not_enough_photos` |
-| `POST /api/admin/battles/{id}/finish-round` | | `AdminBattle`: текущий раунд закрыт сейчас | 409 `round_not_running` |
+| `POST /api/admin/battles/{id}/finish-round` | `{"round": N}`: номер раунда, который ведущий видел на экране | `AdminBattle`: раунд N закрыт сейчас | 409 `round_not_running` (N уже не идёт, например его сменил автостарт) |
 | `POST /api/admin/battles/{id}/next-round` | | `AdminBattle` | 409 `round_not_finished` |
 | `POST /api/admin/battles/{id}/stop` | | `AdminBattle` | 409 `not_active` |
 | `POST /api/admin/battles/{id}/photos/{photo_id}/remove` | | `AdminBattle`: фото проигрывает свой активный матч с `decided_by = removal` | 409 `not_active`, 409 `not_in_active_match` |
