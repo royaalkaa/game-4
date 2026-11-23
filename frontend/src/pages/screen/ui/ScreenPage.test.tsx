@@ -55,6 +55,17 @@ describe('ScreenPage', () => {
     expect(screen.queryByText('70%')).not.toBeInTheDocument();
   });
 
+  it('shows the join link under the QR as a clickable address', async () => {
+    const url = 'http://192.168.1.5:8001/join/1?code=abcd1234';
+    mockFetch({
+      [battleKey]: () => json(makeAdminBattle()),
+      [`GET ${apiUrl('adminJoinLink', { battleId: 1 })}`]: () => json({ url, valid_until: '2026-11-13T18:01:00Z' }),
+    });
+    renderScreen();
+    const link = await screen.findByRole('link', { name: '192.168.1.5:8001/join/1?code=abcd1234' });
+    expect(link).toHaveAttribute('href', url);
+  });
+
   it('shows the score with shares once a duel is finished', async () => {
     const battle = makeAdminBattle({ round_state: 'break' });
     for (const match of battle.bracket.rounds.flatMap((round) => round.matches)) match.status = 'finished';

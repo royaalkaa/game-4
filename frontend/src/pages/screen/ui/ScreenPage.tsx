@@ -7,6 +7,7 @@ import { clockOffsetMs, useNow, usePolling } from '@/shared/lib';
 import { ButtonLink, PhotoFrame, StaleBanner, StateView } from '@/shared/ui';
 import { BattleHeader, getAdminBattle } from '@/entities/battle';
 import { DuelTile } from './DuelTile';
+import { JoinLinkText } from './JoinLinkText';
 
 function Hall({ children }: { children: ReactNode }) {
   return <div className="theme-hall min-h-screen bg-canvas p-10 text-fg">{children}</div>;
@@ -99,6 +100,7 @@ export function ScreenPage() {
         <aside className="flex flex-col items-center gap-4 text-center">
           <img src={qrSrc} alt="QR-код для входа в голосование" className="w-full rounded-2xl bg-qr p-4" />
           <p className="text-4xl font-semibold">Сканируй и голосуй</p>
+          <JoinLinkText battleId={battleId} />
           <p className="text-2xl text-muted">Зрителей: {battle.voters}</p>
         </aside>
         <section className="flex flex-col gap-8">

@@ -15,5 +15,6 @@
   "adminFinishRound": "/api/admin/battles/:battleId/finish-round",
   "adminNextRound": "/api/admin/battles/:battleId/next-round",
   "adminStop": "/api/admin/battles/:battleId/stop",
-  "adminQr": "/api/admin/battles/:battleId/qr.svg"
+  "adminQr": "/api/admin/battles/:battleId/qr.svg",
+  "adminJoinLink": "/api/admin/battles/:battleId/join"
 }

@@ -22,3 +22,12 @@ export function getAdminBattle(battleId: string): Promise<AdminBattle> {
 export function listAdminBattles(): Promise<AdminBattleSummary[]> {
   return request<AdminBattleSummary[]>(apiUrl('adminBattles'));
 }
+
+export interface JoinLink {
+  url: string;
+  valid_until: string;
+}
+
+export function getJoinLink(battleId: string): Promise<JoinLink> {
+  return request<JoinLink>(apiUrl('adminJoinLink', { battleId }));
+}
