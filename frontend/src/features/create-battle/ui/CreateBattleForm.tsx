@@ -8,7 +8,7 @@ interface CreateBattleFormProps {
   onCreated: (battleId: number) => void;
 }
 
-const inputClass = 'min-h-11 rounded-lg border border-line-strong bg-surface px-3';
+const inputClass = 'min-h-11 rounded-md border-2 border-line-strong bg-surface px-3 focus-visible:outline-2 focus-visible:outline-primary';
 
 export function CreateBattleForm({ onCreated }: CreateBattleFormProps) {
   const [title, setTitle] = useState('');
@@ -82,7 +82,7 @@ export function CreateBattleForm({ onCreated }: CreateBattleFormProps) {
     <form
       onSubmit={(event) => void submit(event)}
       aria-label="Новый батл"
-      className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-4"
+      className="flex flex-col gap-4 rounded-md border-2 border-line-strong bg-surface p-4 shadow-hard sm:p-6 lg:sticky lg:top-6"
     >
       <h2 className="text-xl font-semibold">Новый батл</h2>
       <label className="flex flex-col gap-1">

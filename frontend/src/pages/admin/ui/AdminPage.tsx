@@ -29,12 +29,12 @@ function BattleList() {
     return <StateView kind="empty" title="Батлов пока нет" message="Создай первый батл в форме рядом" />;
   }
   return (
-    <ul className="flex flex-col gap-3">
+    <ul className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
       {data.map((battle) => (
         <li key={battle.id}>
           <Link
             to={generatePath(routePaths.adminBattle, { battleId: String(battle.id) })}
-            className="flex items-center gap-3 rounded-xl border border-line bg-surface p-4 transition-colors duration-150 hover:bg-surface-hover"
+            className="flex h-full items-center gap-3 rounded-md border-2 border-line-strong bg-surface p-4 shadow-hard-sm transition-colors duration-150 hover:bg-surface-hover"
           >
             <div className="min-w-0 flex-1">
               <p className="truncate font-semibold">{battle.title}</p>
@@ -76,9 +76,9 @@ export function AdminPage() {
   }
 
   return (
-    <Page>
-      <h1 className="text-2xl font-bold">Батлы</h1>
-      <div className="grid gap-6 md:grid-cols-[1fr_380px]">
+    <Page wide>
+      <h1 className="text-3xl font-bold sm:text-4xl">Батлы</h1>
+      <div className="grid items-start gap-6 lg:grid-cols-[1fr_400px] lg:gap-10">
         <BattleList />
         <CreateBattleForm
           onCreated={(battleId) =>

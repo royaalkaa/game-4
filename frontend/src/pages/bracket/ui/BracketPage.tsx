@@ -32,7 +32,7 @@ export function BracketPage() {
 
   const { battle, bracket, offsetMs } = data;
   return (
-    <Page>
+    <Page wide>
       <ButtonLink to={generatePath(routePaths.battle, { battleId })} className="w-fit">
         <ArrowLeft aria-hidden size={18} />К батлу
       </ButtonLink>

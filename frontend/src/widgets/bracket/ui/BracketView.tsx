@@ -38,7 +38,7 @@ export function BracketView({ bracket, totalRounds, currentRound, photoAction }:
           <section
             key={column.round}
             aria-label={column.title}
-            className={`${selected === column.round ? 'flex' : 'hidden'} flex-col gap-3 md:flex md:w-64 md:shrink-0`}
+            className={`${selected === column.round ? 'flex' : 'hidden'} flex-col gap-3 md:flex md:min-w-56 md:flex-1`}
           >
             <h3 className="hidden font-semibold md:block">{column.title}</h3>
             <div className="flex flex-1 flex-col justify-around gap-3">

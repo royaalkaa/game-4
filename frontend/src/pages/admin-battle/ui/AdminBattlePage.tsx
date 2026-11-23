@@ -56,7 +56,7 @@ export function AdminBattlePage() {
   const runningRound = battle.round_state === 'running' ? battle.current_round : null;
 
   return (
-    <Page>
+    <Page wide>
       {backLink}
       <BattleHeader battle={battle} offsetMs={offsetMs} />
       {error && (
