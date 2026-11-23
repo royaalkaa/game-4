@@ -13,18 +13,18 @@ export function BattleHeader({ battle, offsetMs, large = false }: BattleHeaderPr
   const active = battle.status === 'active' && battle.current_round !== null;
   return (
     <header className="flex flex-col gap-1">
-      <h1 className={large ? 'text-6xl font-bold' : 'text-2xl font-bold'}>{battle.title}</h1>
+      <h1 className={large ? 'text-6xl font-bold leading-tight' : 'text-2xl font-bold leading-tight'}>{battle.title}</h1>
       {battle.theme && <p className={large ? 'text-3xl text-muted' : 'text-muted'}>Тема: {battle.theme}</p>}
       <div className={`flex flex-wrap items-center gap-x-4 gap-y-1 ${large ? 'mt-4 text-4xl' : 'mt-1 text-base'}`}>
         {active ? (
-          <span className="font-medium">
+          <span className="rounded-md border-2 border-line-strong bg-primary px-2 py-0.5 font-semibold text-on-primary">
             Раунд {battle.current_round} из {battle.total_rounds}
           </span>
         ) : (
           <span className="font-medium">{statusLabels[battle.status]}</span>
         )}
         {active && battle.round_state === 'running' && battle.round_ends_at && (
-          <span className="inline-flex items-center gap-2 font-semibold">
+          <span className="inline-flex items-center gap-2 font-display font-semibold tabular-nums">
             <Timer aria-hidden size={large ? 40 : 18} />
             <RoundTimer endsAt={battle.round_ends_at} offsetMs={offsetMs} />
           </span>

@@ -38,7 +38,15 @@ export function DuelVote({ match, onVoted, onStale }: DuelVoteProps) {
     <section aria-label="Дуэль" className="flex flex-col gap-4">
       <p className="text-sm text-muted">Проголосовало: {match.total_votes}</p>
       {/* Both photos and both buttons fit on one phone screen without scrolling. */}
-      <div className="grid gap-4 md:grid-cols-2 md:gap-6">
+      <div className="relative grid gap-5 md:grid-cols-2 md:gap-10">
+        {photos.length === 2 && (
+          <span
+            aria-hidden
+            className="pointer-events-none absolute top-1/2 left-1/2 z-10 flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 -rotate-12 items-center justify-center rounded-full border-2 border-line-strong bg-surface font-display text-lg font-bold shadow-hard-sm md:h-20 md:w-20 md:text-2xl"
+          >
+            VS
+          </span>
+        )}
         {photos.map((photo, index) => {
           const label = photoLabel(photo, index === 0 ? 1 : 2);
           return (
@@ -46,7 +54,8 @@ export function DuelVote({ match, onVoted, onStale }: DuelVoteProps) {
               <PhotoFrame src={photo.url} alt={label} className="h-[26svh] w-full md:h-[60vh]" />
               {photo.caption && <figcaption className="text-center">{photo.caption}</figcaption>}
               <Button
-                variant="primary"
+                // Each side keeps its own colour through the whole battle: red against blue.
+                variant={index === 0 ? 'primary' : 'accent'}
                 size="lg"
                 aria-label={`Выбрать: ${label}`}
                 disabled={pendingId !== null}

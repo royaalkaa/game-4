@@ -1,18 +1,20 @@
 import type { ButtonHTMLAttributes } from 'react';
 import { Link, type LinkProps } from 'react-router';
 
-type Variant = 'primary' | 'secondary' | 'danger';
+type Variant = 'primary' | 'accent' | 'secondary' | 'danger';
 type Size = 'md' | 'lg';
 
 const base =
-  'inline-flex items-center justify-center gap-2 rounded-lg border-2 font-medium transition-colors duration-150 ' +
+  'inline-flex items-center justify-center gap-2 rounded-md border-2 border-line-strong font-semibold ' +
+  'shadow-hard-sm transition duration-100 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none ' +
   'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ' +
   'disabled:cursor-not-allowed disabled:opacity-50';
 
 const variants: Record<Variant, string> = {
-  primary: 'border-primary bg-primary text-on-primary hover:bg-primary-hover hover:border-primary-hover',
-  secondary: 'border-line-strong bg-surface text-fg hover:bg-surface-hover',
-  danger: 'border-danger bg-surface text-danger hover:bg-danger-soft',
+  primary: 'bg-primary text-on-primary hover:bg-primary-hover',
+  accent: 'bg-accent text-on-primary hover:bg-accent-hover',
+  secondary: 'bg-surface text-fg hover:bg-surface-hover',
+  danger: 'bg-surface text-danger hover:bg-danger-soft',
 };
 
 const sizes: Record<Size, string> = {
