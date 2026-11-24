@@ -12,3 +12,4 @@ export const nextRound = (battleId: string) => post(apiUrl('adminNextRound', { b
 export const stopBattle = (battleId: string) => post(apiUrl('adminStop', { battleId }));
 export const removePhoto = (battleId: string, photoId: number) =>
   post(apiUrl('adminRemovePhoto', { battleId, photoId }));
+export const startVoting = (battleId: string) => post(apiUrl('adminStartVoting', { battleId }));

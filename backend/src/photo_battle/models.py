@@ -14,6 +14,16 @@ class BattleStatus(StrEnum):
     STOPPED = "stopped"
 
 
+class BattleMode(StrEnum):
+    DUEL = "duel"
+    SWIPE = "swipe"
+
+
+class SwipePhase(StrEnum):
+    COLLECTING = "collecting"
+    VOTING = "voting"
+
+
 class RoundState(StrEnum):
     RUNNING = "running"
     BREAK = "break"
@@ -50,6 +60,11 @@ class Battle(Base):
     title: Mapped[str] = mapped_column(String(80))
     theme: Mapped[str] = mapped_column(String(120))
     status: Mapped[BattleStatus] = mapped_column(_enum(BattleStatus, "battle_status"))
+    mode: Mapped[BattleMode] = mapped_column(
+        _enum(BattleMode, "battle_mode"), server_default=BattleMode.DUEL.value
+    )
+    # Только у свайпов: гости сначала присылают фото, потом голосуют.
+    phase: Mapped[SwipePhase | None] = mapped_column(_enum(SwipePhase, "swipe_phase"))
     round_seconds: Mapped[int] = mapped_column(Integer)
     freeze_seconds: Mapped[int] = mapped_column(Integer)
     auto_advance: Mapped[bool] = mapped_column(Boolean)
@@ -57,6 +72,8 @@ class Battle(Base):
     current_round: Mapped[int | None] = mapped_column(Integer)
     round_state: Mapped[RoundState | None] = mapped_column(_enum(RoundState, "round_state"))
     round_ends_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    # Фон экрана зала и телефонов гостей; файл лежит рядом с фото в media.
+    background_key: Mapped[str | None] = mapped_column(String(32))
     created_at: Mapped[datetime] = mapped_column(UTCDateTime)
 
 
@@ -70,6 +87,10 @@ class Photo(Base):
     width: Mapped[int] = mapped_column(Integer)
     height: Mapped[int] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime)
+    # Гость, который сам загрузил фото в свайпах: за своё фото он не голосует.
+    voter_id: Mapped[int | None] = mapped_column(ForeignKey("voters.id"))
+    # Снятое ведущим фото выпадает из колоды и итогов, но остаётся в БД ради свайпов.
+    removed_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
 
 
 class Match(Base):
@@ -115,6 +136,17 @@ class Vote(Base):
     match_id: Mapped[int] = mapped_column(ForeignKey("matches.id"), index=True)
     voter_id: Mapped[int] = mapped_column(ForeignKey("voters.id"))
     photo_id: Mapped[int] = mapped_column(ForeignKey("photos.id"))
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime)
+
+
+class Swipe(Base):
+    __tablename__ = "swipes"
+    __table_args__ = (UniqueConstraint("photo_id", "voter_id"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    photo_id: Mapped[int] = mapped_column(ForeignKey("photos.id"), index=True)
+    voter_id: Mapped[int] = mapped_column(ForeignKey("voters.id"))
+    liked: Mapped[bool] = mapped_column(Boolean)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime)
 
 

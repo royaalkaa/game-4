@@ -16,6 +16,7 @@ const summary = {
   title: 'Весенний батл',
   theme: 'Цветы',
   status: 'draft',
+  mode: 'duel',
   photo_count: 5,
   created_at: '2026-11-13T10:00:00Z',
 };
@@ -106,6 +107,7 @@ describe('AdminPage', () => {
       round_seconds: 150,
       freeze_seconds: 60,
       auto_advance: true,
+      mode: 'duel',
     });
   });
 });

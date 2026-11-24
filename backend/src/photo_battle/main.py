@@ -64,6 +64,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 await task
             engine.dispose()
 
+    # Файл lock рядом с медиа: все процессы uvicorn одного сервера видят одну папку.
+    game.LOCK.use_file(str(settings.media_dir.parent / "battle.lock"))
+
     app = FastAPI(title="Фото-батлы", lifespan=lifespan)
     app.state.settings = settings
     app.state.session_factory = session_factory

@@ -1,4 +1,4 @@
-import { apiUrl, request, type AdminBattle } from '@/shared/api';
+import { apiUrl, request, type AdminBattle, type BattleMode } from '@/shared/api';
 
 export interface CreateBattleInput {
   title: string;
@@ -6,6 +6,7 @@ export interface CreateBattleInput {
   round_seconds: number;
   freeze_seconds: number;
   auto_advance: boolean;
+  mode: BattleMode;
 }
 
 export function createBattle(input: CreateBattleInput): Promise<AdminBattle> {

@@ -30,6 +30,8 @@ export function makeBattle(overrides: Partial<Battle> = {}): Battle {
     id: 1,
     title: 'Осенний батл',
     theme: 'Город ночью',
+    mode: 'duel',
+    phase: null,
     status: 'active',
     round_state: 'running',
     current_round: 1,
@@ -38,6 +40,8 @@ export function makeBattle(overrides: Partial<Battle> = {}): Battle {
     frozen: false,
     winner: null,
     joined: true,
+    my_photo: null,
+    participants: 4,
     server_time: SERVER_TIME,
     ...overrides,
   };
@@ -63,6 +67,8 @@ export function makeAdminBattle(overrides: Partial<AdminBattle> = {}): AdminBatt
       ],
     },
     voters: 42,
+    swipers: 0,
+    standings: [],
     ...overrides,
   };
 }

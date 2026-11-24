@@ -2,6 +2,7 @@ import contextlib
 import secrets
 from datetime import datetime, timedelta
 from io import BytesIO
+from pathlib import Path
 from typing import Annotated, Any
 
 import segno
@@ -26,6 +27,7 @@ from photo_battle.errors import ApiError, not_found
 from photo_battle.models import (
     AdminSession,
     Battle,
+    BattleMode,
     BattleStatus,
     DecidedBy,
     JoinCode,
@@ -33,6 +35,7 @@ from photo_battle.models import (
     MatchStatus,
     Photo,
     RoundState,
+    SwipePhase,
 )
 from photo_battle.security import new_token, verify_admin_password
 
@@ -45,6 +48,8 @@ ADMIN_SESSION_TTL = timedelta(hours=12)
 LOGIN_WINDOW = timedelta(minutes=10)
 LOGIN_MAX_FAILURES = 5
 MAX_PHOTOS = 16
+# В свайпах фото присылают сами гости; потолок рассчитан на зал до 200 человек.
+MAX_SWIPE_PHOTOS = 200
 MIN_PHOTOS = 2
 JOIN_CODE_ROTATE = timedelta(seconds=30)
 JOIN_CODE_TTL = timedelta(seconds=60)
@@ -60,6 +65,7 @@ class BattleIn(BaseModel):
     round_seconds: int = Field(ge=30, le=86400)
     freeze_seconds: int = Field(ge=0)
     auto_advance: bool
+    mode: BattleMode = BattleMode.DUEL
 
     @model_validator(mode="after")
     def _freeze_inside_round(self) -> "BattleIn":
@@ -138,6 +144,7 @@ def list_battles(db: DbSession) -> list[dict[str, Any]]:
             "title": battle.title,
             "theme": battle.theme,
             "status": battle.status.value,
+            "mode": battle.mode.value,
             "photo_count": count,
             "created_at": views.iso(battle.created_at),
         }
@@ -167,6 +174,7 @@ def create_battle(body: BattleIn, request: Request, db: DbSession) -> dict[str, 
         round_seconds=body.round_seconds,
         freeze_seconds=body.freeze_seconds,
         auto_advance=body.auto_advance,
+        mode=body.mode,
         created_at=clock.now(),
     )
     db.add(battle)
@@ -184,6 +192,36 @@ def _not_draft() -> ApiError:
     return ApiError(409, "not_draft", "Батл уже запущен, менять фото нельзя.")
 
 
+def photos_editable(battle: Battle) -> bool:
+    """Фото меняются в черновике, а у свайпов ещё и пока идёт приём фото от гостей."""
+    if battle.status == BattleStatus.DRAFT:
+        return True
+    return battle.mode == BattleMode.SWIPE and battle.phase == SwipePhase.COLLECTING
+
+
+def photo_limit(battle: Battle) -> int:
+    return MAX_SWIPE_PHOTOS if battle.mode == BattleMode.SWIPE else MAX_PHOTOS
+
+
+def live_photo_count(db: Session, battle: Battle) -> int:
+    count = db.scalar(
+        select(func.count(Photo.id)).where(Photo.battle_id == battle.id, Photo.removed_at.is_(None))
+    )
+    return count or 0
+
+
+def store_upload(file: UploadFile, media_dir: Path) -> images.StoredImage:
+    try:
+        data = images.read_limited(file.file)
+        return images.store_image(data, media_dir)
+    except images.ImageTooLarge:
+        raise ApiError(413, "too_large", "Файл больше 10 МБ.") from None
+    except images.ImageRejected:
+        raise ApiError(
+            400, "bad_image", "Нужна картинка JPEG, PNG или WebP не больше 8000 px по стороне."
+        ) from None
+
+
 @router.post("/battles/{battle_id}/photos")
 def upload_photo(
     battle_id: int,
@@ -193,20 +231,12 @@ def upload_photo(
     caption: Annotated[str | None, Form(max_length=80)] = None,
 ) -> dict[str, Any]:
     battle = _admin_battle(db, battle_id)
-    if battle.status != BattleStatus.DRAFT:
+    if not photos_editable(battle):
         raise _not_draft()
-    count = db.scalar(select(func.count(Photo.id)).where(Photo.battle_id == battle.id))
-    if count is not None and count >= MAX_PHOTOS:
-        raise ApiError(409, "too_many_photos", f"В батле не больше {MAX_PHOTOS} фото.")
-    try:
-        data = images.read_limited(file.file)
-        stored = images.store_image(data, settings.media_dir)
-    except images.ImageTooLarge:
-        raise ApiError(413, "too_large", "Файл больше 10 МБ.") from None
-    except images.ImageRejected:
-        raise ApiError(
-            400, "bad_image", "Нужна картинка JPEG, PNG или WebP не больше 8000 px по стороне."
-        ) from None
+    limit = photo_limit(battle)
+    if live_photo_count(db, battle) >= limit:
+        raise ApiError(409, "too_many_photos", f"В батле не больше {limit} фото.")
+    stored = store_upload(file, settings.media_dir)
     photo = Photo(
         battle_id=battle.id,
         file_key=stored.file_key,
@@ -226,7 +256,7 @@ def delete_photo(
     battle_id: int, photo_id: int, db: DbSession, settings: SettingsDep
 ) -> dict[str, bool]:
     battle = _admin_battle(db, battle_id)
-    if battle.status != BattleStatus.DRAFT:
+    if not photos_editable(battle):
         raise _not_draft()
     photo = db.get(Photo, photo_id)
     if photo is None or photo.battle_id != battle.id:
@@ -239,6 +269,35 @@ def delete_photo(
     return {"ok": True}
 
 
+@router.put("/battles/{battle_id}/background")
+def upload_background(
+    battle_id: int, file: UploadFile, request: Request, db: DbSession, settings: SettingsDep
+) -> dict[str, Any]:
+    battle = _admin_battle(db, battle_id)
+    stored = store_upload(file, settings.media_dir)
+    old_key = battle.background_key
+    battle.background_key = stored.file_key
+    db.commit()
+    if old_key:
+        (settings.media_dir / f"{old_key}.jpg").unlink(missing_ok=True)
+    log.info("background_set", battle_id=battle.id)
+    return _admin_view(request, db, battle)
+
+
+@router.delete("/battles/{battle_id}/background")
+def delete_background(
+    battle_id: int, request: Request, db: DbSession, settings: SettingsDep
+) -> dict[str, Any]:
+    battle = _admin_battle(db, battle_id)
+    old_key = battle.background_key
+    battle.background_key = None
+    db.commit()
+    if old_key:
+        (settings.media_dir / f"{old_key}.jpg").unlink(missing_ok=True)
+    log.info("background_cleared", battle_id=battle.id)
+    return _admin_view(request, db, battle)
+
+
 @router.post("/battles/{battle_id}/start")
 def start_battle(battle_id: int, request: Request, db: DbSession) -> dict[str, Any]:
     battle = _admin_battle(db, battle_id)
@@ -246,12 +305,33 @@ def start_battle(battle_id: int, request: Request, db: DbSession) -> dict[str, A
         db.refresh(battle)
         if battle.status != BattleStatus.DRAFT:
             raise _not_draft()
-        count = db.scalar(select(func.count(Photo.id)).where(Photo.battle_id == battle.id))
-        if count is None or count < MIN_PHOTOS:
-            raise ApiError(409, "not_enough_photos", "Для старта нужно хотя бы 2 фото.")
-        game.start_battle(db, battle, clock.now())
+        if battle.mode == BattleMode.SWIPE:
+            # Фото пришлют гости после входа по QR, минимум проверит старт голосования.
+            game.open_collecting(battle)
+        else:
+            if live_photo_count(db, battle) < MIN_PHOTOS:
+                raise _not_enough_photos()
+            game.start_battle(db, battle, clock.now())
         db.commit()
     log.info("battle_started", battle_id=battle.id)
+    return _admin_view(request, db, battle)
+
+
+def _not_enough_photos() -> ApiError:
+    return ApiError(409, "not_enough_photos", "Для старта нужно хотя бы 2 фото.")
+
+
+@router.post("/battles/{battle_id}/start-voting")
+def start_voting(battle_id: int, request: Request, db: DbSession) -> dict[str, Any]:
+    battle = _admin_battle(db, battle_id)
+    with game.LOCK:
+        db.refresh(battle)
+        if battle.status != BattleStatus.ACTIVE or battle.phase != SwipePhase.COLLECTING:
+            raise ApiError(409, "not_collecting", "Приём фото уже закрыт.")
+        if live_photo_count(db, battle) < MIN_PHOTOS:
+            raise _not_enough_photos()
+        game.start_voting(battle, clock.now())
+        db.commit()
     return _admin_view(request, db, battle)
 
 
@@ -324,6 +404,13 @@ def remove_photo(battle_id: int, photo_id: int, request: Request, db: DbSession)
         db.refresh(battle)
         if battle.status != BattleStatus.ACTIVE:
             raise _not_active()
+        if battle.mode == BattleMode.SWIPE:
+            # Свайпы по снятому фото остаются в БД, но фото выпадает из колоды и итогов.
+            if photo.removed_at is None:
+                photo.removed_at = clock.now()
+                db.commit()
+            log.info("photo_removed", battle_id=battle.id, photo_id=photo.id)
+            return _admin_view(request, db, battle)
         match = db.scalar(
             select(Match).where(
                 Match.battle_id == battle.id,

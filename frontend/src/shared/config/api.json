@@ -9,6 +9,7 @@
   "adminBattles": "/api/admin/battles",
   "adminBattle": "/api/admin/battles/:battleId",
   "adminPhotos": "/api/admin/battles/:battleId/photos",
+  "adminBackground": "/api/admin/battles/:battleId/background",
   "adminPhoto": "/api/admin/battles/:battleId/photos/:photoId",
   "adminRemovePhoto": "/api/admin/battles/:battleId/photos/:photoId/remove",
   "adminStart": "/api/admin/battles/:battleId/start",
@@ -16,5 +17,10 @@
   "adminNextRound": "/api/admin/battles/:battleId/next-round",
   "adminStop": "/api/admin/battles/:battleId/stop",
   "adminQr": "/api/admin/battles/:battleId/qr.svg",
-  "adminJoinLink": "/api/admin/battles/:battleId/join"
+  "adminJoinLink": "/api/admin/battles/:battleId/join",
+  "deck": "/api/battles/:battleId/deck",
+  "myPhoto": "/api/battles/:battleId/my-photo",
+  "standings": "/api/battles/:battleId/standings",
+  "swipe": "/api/photos/:photoId/swipe",
+  "adminStartVoting": "/api/admin/battles/:battleId/start-voting"
 }

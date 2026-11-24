@@ -32,7 +32,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export function Button({ variant = 'secondary', size = 'md', className, type = 'button', ...rest }: ButtonProps) {
-  return <button type={type} className={buttonClass(variant, size, className)} {...rest} />;
+  return <button type={type} data-button={variant} className={buttonClass(variant, size, className)} {...rest} />;
 }
 
 interface ButtonLinkProps extends LinkProps {
@@ -41,5 +41,5 @@ interface ButtonLinkProps extends LinkProps {
 }
 
 export function ButtonLink({ variant = 'secondary', size = 'md', className, ...rest }: ButtonLinkProps) {
-  return <Link className={buttonClass(variant, size, className)} {...rest} />;
+  return <Link data-button={variant} className={buttonClass(variant, size, className)} {...rest} />;
 }

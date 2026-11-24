@@ -118,3 +118,44 @@ def test_caption_hidden_from_guests_until_match_finished(admin, guest) -> None:
     admin.post(f"/api/admin/battles/{battle_id}/finish-round", json={"round": 1})
     rounds = guest.get(f"/api/battles/{battle_id}/bracket").json()["rounds"]
     assert rounds[0]["matches"][0]["photo_a"]["caption"].startswith("Автор")
+
+
+def put_background(client, battle_id: int, data: bytes):
+    return client.put(
+        f"/api/admin/battles/{battle_id}/background",
+        files={"file": ("bg.png", data, "image/png")},
+    )
+
+
+def test_background_set_replace_and_clear(admin, guest, settings) -> None:
+    battle_id = start_battle(admin, 2)
+    assert guest.get(f"/api/battles/{battle_id}").json()["background_url"] is None
+
+    first = put_background(admin, battle_id, image_bytes("PNG", (3000, 1500)))
+    assert first.status_code == 200, first.text
+    first_url = first.json()["background_url"]
+    first_file = settings.media_dir / first_url.removeprefix("/media/")
+    assert first_file.is_file()
+    with Image.open(first_file) as stored:
+        assert stored.format == "JPEG"
+        assert max(stored.size) <= 2048
+    assert guest.get(f"/api/battles/{battle_id}").json()["background_url"] == first_url
+
+    second = put_background(admin, battle_id, image_bytes("JPEG"))
+    second_url = second.json()["background_url"]
+    assert second_url != first_url
+    assert not first_file.exists()
+
+    cleared = admin.delete(f"/api/admin/battles/{battle_id}/background")
+    assert cleared.status_code == 200
+    assert cleared.json()["background_url"] is None
+    assert not (settings.media_dir / second_url.removeprefix("/media/")).exists()
+
+
+def test_background_needs_admin_and_a_real_image(admin, guest) -> None:
+    battle_id = create_battle(admin)
+    assert put_background(guest, battle_id, image_bytes()).status_code == 401
+    bad = put_background(admin, battle_id, b"not an image")
+    assert bad.status_code == 400
+    assert error_code(bad) == "bad_image"
+    assert admin.get(f"/api/admin/battles/{battle_id}").json()["background_url"] is None

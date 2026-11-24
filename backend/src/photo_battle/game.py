@@ -1,30 +1,72 @@
 """Турнирная логика: сетка, старт и закрытие раундов."""
 
+import fcntl
+import os
 import secrets
 import threading
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 import structlog
-from sqlalchemy import select
+from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session, sessionmaker
 
 from photo_battle import clock
 from photo_battle.models import (
     Battle,
+    BattleMode,
     BattleStatus,
     DecidedBy,
     Match,
     MatchStatus,
     Photo,
     RoundState,
+    Swipe,
+    SwipePhase,
     Vote,
 )
 
 log = structlog.get_logger()
 
+
+class BattleLock:
+    """Lock для потоков одного процесса и для нескольких процессов uvicorn сразу.
+
+    Под залом из 100+ гостей один процесс упирается в одно ядро, поэтому сервер
+    запускается с --workers. Потоки процесса встают в очередь на threading.Lock,
+    а процессы делят flock на общем файле рядом с базой.
+    """
+
+    def __init__(self) -> None:
+        self._thread_lock = threading.Lock()
+        self._fd: int | None = None
+
+    def use_file(self, path: str) -> None:
+        if self._fd is not None:
+            os.close(self._fd)
+        self._fd = os.open(path, os.O_RDWR | os.O_CREAT, 0o600)
+
+    def __enter__(self) -> "BattleLock":
+        self._thread_lock.acquire()
+        if self._fd is not None:
+            try:
+                fcntl.flock(self._fd, fcntl.LOCK_EX)
+            except BaseException:
+                self._thread_lock.release()
+                raise
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        try:
+            if self._fd is not None:
+                fcntl.flock(self._fd, fcntl.LOCK_UN)
+        finally:
+            self._thread_lock.release()
+
+
 # Все переходы состояния батла и запись голосов идут под этим lock, чтобы
 # фоновая задача, запросы зрителей и кнопки ведущего не закрыли раунд дважды.
-LOCK = threading.Lock()
+LOCK = BattleLock()
 
 
 def build_first_round(photo_ids: list[int]) -> list[tuple[int, int | None]]:
@@ -115,7 +157,63 @@ def _decide(db: Session, match: Match) -> None:
     match.status = MatchStatus.FINISHED
 
 
+def open_collecting(battle: Battle) -> None:
+    """Свайпы: батл открыт, гости входят по QR и присылают фото с именем."""
+    battle.status = BattleStatus.ACTIVE
+    battle.phase = SwipePhase.COLLECTING
+    log.info("collecting_opened", battle_id=battle.id)
+
+
+def start_voting(battle: Battle, now: datetime) -> None:
+    """Свайпы: приём фото закрыт, идёт одно голосование на всё время раунда."""
+    battle.phase = SwipePhase.VOTING
+    battle.current_round = 1
+    battle.total_rounds = 1
+    battle.round_state = RoundState.RUNNING
+    battle.round_ends_at = now + timedelta(seconds=battle.round_seconds)
+    log.info("voting_started", battle_id=battle.id)
+
+
+@dataclass(frozen=True)
+class Standing:
+    photo: Photo
+    likes: int
+    dislikes: int
+    rank: int
+
+
+def standings(db: Session, battle: Battle) -> list[Standing]:
+    """Итоги свайпов: больше «да» выше; при равенстве выше тот, у кого меньше «нет»."""
+    likes = func.coalesce(func.sum(case((Swipe.liked.is_(True), 1), else_=0)), 0)
+    dislikes = func.coalesce(func.sum(case((Swipe.liked.is_(False), 1), else_=0)), 0)
+    rows = db.execute(
+        select(Photo, likes, dislikes)
+        .outerjoin(Swipe, Swipe.photo_id == Photo.id)
+        .where(Photo.battle_id == battle.id, Photo.removed_at.is_(None))
+        .group_by(Photo.id)
+        .order_by(likes.desc(), dislikes, Photo.id)
+    ).all()
+    result: list[Standing] = []
+    for index, (photo, yes, no) in enumerate(rows):
+        # Одинаковый счёт делит место: 1, 1, 3.
+        same = result and (result[-1].likes, result[-1].dislikes) == (yes, no)
+        rank = result[-1].rank if same else index + 1
+        result.append(Standing(photo=photo, likes=yes, dislikes=no, rank=rank))
+    return result
+
+
+def _finish(battle: Battle) -> None:
+    battle.status = BattleStatus.FINISHED
+    battle.round_state = None
+    battle.round_ends_at = None
+
+
 def close_round(db: Session, battle: Battle, now: datetime) -> None:
+    if battle.mode == BattleMode.SWIPE:
+        _finish(battle)
+        battle.phase = None
+        log.info("battle_finished", battle_id=battle.id)
+        return
     round_no = battle.current_round
     matches = list(
         db.scalars(
@@ -129,9 +227,7 @@ def close_round(db: Session, battle: Battle, now: datetime) -> None:
             _decide(db, match)
     log.info("round_closed", battle_id=battle.id, round=round_no)
     if round_no == battle.total_rounds:
-        battle.status = BattleStatus.FINISHED
-        battle.round_state = None
-        battle.round_ends_at = None
+        _finish(battle)
         log.info("battle_finished", battle_id=battle.id, winner_id=matches[0].winner_id)
         return
     next_round = round_no + 1

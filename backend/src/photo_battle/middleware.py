@@ -13,7 +13,7 @@ from photo_battle.images import MAX_UPLOAD_BYTES
 log = structlog.get_logger()
 
 REQUEST_ID_RE = re.compile(r"[A-Za-z0-9._-]{1,64}")
-UPLOAD_PATH_RE = re.compile(r"/api/admin/battles/\d{1,18}/photos")
+UPLOAD_PATH_RE = re.compile(r"/api(/admin)?/battles/\d{1,18}/(photos|my-photo)")
 # Запас на заголовки multipart и подпись поверх лимита самого файла.
 UPLOAD_BODY_LIMIT = MAX_UPLOAD_BYTES + 64 * 1024
 

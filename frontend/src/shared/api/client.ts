@@ -86,10 +86,11 @@ export function uploadForm<T>(
   url: string,
   form: FormData,
   onProgress: (fraction: number) => void,
+  method: 'POST' | 'PUT' = 'POST',
 ): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open('POST', url);
+    xhr.open(method, url);
     xhr.withCredentials = true;
     xhr.upload.onprogress = (event) => {
       if (event.lengthComputable && event.total > 0) onProgress(event.loaded / event.total);

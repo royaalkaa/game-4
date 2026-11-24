@@ -8,9 +8,15 @@ interface DraftPhotoGridProps {
   battleId: string;
   photos: Photo[];
   onChanged: () => void;
+  emptyMessage?: string;
 }
 
-export function DraftPhotoGrid({ battleId, photos, onChanged }: DraftPhotoGridProps) {
+export function DraftPhotoGrid({
+  battleId,
+  photos,
+  onChanged,
+  emptyMessage = 'Загрузи от 2 до 16 фото, чтобы запустить батл',
+}: DraftPhotoGridProps) {
   const [target, setTarget] = useState<Photo | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -31,7 +37,7 @@ export function DraftPhotoGrid({ battleId, photos, onChanged }: DraftPhotoGridPr
   };
 
   if (photos.length === 0) {
-    return <StateView kind="empty" title="Фото пока нет" message="Загрузи от 2 до 16 фото, чтобы запустить батл" />;
+    return <StateView kind="empty" title="Фото пока нет" message={emptyMessage} />;
   }
 
   return (

@@ -3,12 +3,14 @@ import { generatePath, useParams } from 'react-router';
 import { Network, Trophy } from 'lucide-react';
 import { asApiError, type ApiError, type Match } from '@/shared/api';
 import { routePaths, VOTE_RESULT_MS, VOTER_POLL_MS } from '@/shared/config';
-import { clockOffsetMs, usePolling } from '@/shared/lib';
+import { clockOffsetMs, useBackdrop, usePolling } from '@/shared/lib';
 import { Button, ButtonLink, Page, PhotoFrame, StaleBanner, StateView } from '@/shared/ui';
 import { BattleHeader, getBattle, getBracket } from '@/entities/battle';
 import { MatchCard } from '@/entities/match';
 import { DuelVote, getNextMatch, VoteResult } from '@/features/vote';
 import { selectVoteView } from '../model/selectView';
+import { SwipeTopBar } from './SwipeTopBar';
+import { SwipeVote } from './SwipeVote';
 
 export function VotePage() {
   const { battleId = '' } = useParams();
@@ -20,6 +22,7 @@ export function VotePage() {
   }, [battleId]);
   const polling = usePolling(load, VOTER_POLL_MS);
   const battle = polling.data?.battle;
+  useBackdrop(battle?.background_url);
 
   const [next, setNext] = useState<{ round: number; match: Match | null } | undefined>();
   const [nextError, setNextError] = useState<ApiError | undefined>();
@@ -29,6 +32,7 @@ export function VotePage() {
   const nextMatch = next && next.round === round ? next.match : undefined;
   const needNext =
     battle !== undefined &&
+    battle.mode === 'duel' &&
     battle.joined &&
     battle.status === 'active' &&
     battle.round_state === 'running' &&
@@ -104,6 +108,19 @@ export function VotePage() {
     );
   }
   if (!battle || !polling.data) return null;
+
+  if (battle.mode === 'swipe') {
+    // Swipe battles look like a dating app and stay phone-sized even on a laptop.
+    return (
+      <div className="theme-swipe min-h-svh">
+        <main className="mx-auto flex w-full max-w-md flex-col gap-4 px-4 py-3">
+          <SwipeTopBar battle={battle} offsetMs={polling.data.offsetMs} />
+          {polling.error && <StaleBanner message={polling.error.message} />}
+          <SwipeVote battle={battle} battleId={battleId} refresh={polling.refresh} />
+        </main>
+      </div>
+    );
+  }
 
   const bracketLink = (
     <ButtonLink to={bracketPath}>

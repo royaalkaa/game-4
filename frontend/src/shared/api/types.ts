@@ -1,4 +1,7 @@
 export type BattleStatus = 'draft' | 'active' | 'finished' | 'stopped';
+export type BattleMode = 'duel' | 'swipe';
+// Swipe battles only: guests send photos first, then vote.
+export type SwipePhase = 'collecting' | 'voting';
 export type RoundState = 'running' | 'break';
 export type MatchStatus = 'pending' | 'active' | 'finished';
 export type DecidedBy = 'votes' | 'tie' | 'lot' | 'removal' | 'bye';
@@ -31,6 +34,8 @@ export interface Battle {
   id: number;
   title: string;
   theme: string;
+  mode: BattleMode;
+  phase: SwipePhase | null;
   status: BattleStatus;
   round_state: RoundState | null;
   current_round: number | null;
@@ -39,6 +44,10 @@ export interface Battle {
   frozen: boolean;
   winner: Photo | null;
   joined: boolean;
+  my_photo: Photo | null;
+  participants: number;
+  /** Фон экрана зала и телефонов; null — стандартный. */
+  background_url?: string | null;
   server_time: string;
 }
 
@@ -53,6 +62,20 @@ export interface AdminBattle extends Battle {
   photos: Photo[];
   bracket: Bracket;
   voters: number;
+  swipers: number;
+  standings: Standing[];
+}
+
+export interface Standing {
+  photo: Photo;
+  likes: number;
+  dislikes: number;
+  rank: number;
+}
+
+export interface Deck {
+  photos: Photo[];
+  total: number;
 }
 
 export interface AdminBattleSummary {
@@ -60,6 +83,7 @@ export interface AdminBattleSummary {
   title: string;
   theme: string;
   status: BattleStatus;
+  mode: BattleMode;
   photo_count: number;
   created_at: string;
 }

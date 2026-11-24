@@ -15,6 +15,8 @@
 
 ```ts
 type BattleStatus = "draft" | "active" | "finished" | "stopped";
+type BattleMode = "duel" | "swipe";
+type SwipePhase = "collecting" | "voting";       // только у свайпов
 type RoundState = "running" | "break";            // break: раунд закрыт, ждём ведущего
 type MatchStatus = "pending" | "active" | "finished";
 type DecidedBy = "votes" | "tie" | "lot" | "removal" | "bye";
@@ -47,6 +49,8 @@ interface Battle {
   id: number;
   title: string;
   theme: string;
+  mode: BattleMode;
+  phase: SwipePhase | null;         // null у дуэлей и у законченных свайпов
   status: BattleStatus;
   round_state: RoundState | null;   // null у draft, finished, stopped
   current_round: number | null;
@@ -55,6 +59,8 @@ interface Battle {
   frozen: boolean;                  // идёт заморозка счёта
   winner: Photo | null;
   joined: boolean;                  // у запроса есть валидная cookie голосующего
+  my_photo: Photo | null;           // свайпы: фото, которое прислал этот гость
+  participants: number;             // фото в игре, без снятых
   server_time: string;
 }
 
@@ -88,7 +94,7 @@ interface Bracket { rounds: { round: number; matches: Match[] }[] }
 | `POST /api/admin/logout` | | `{"ok": true}` | |
 | `GET /api/admin/me` | | `{"admin": true}` | 401 |
 | `GET /api/admin/battles` | | `[{id, title, theme, status, photo_count, created_at}]`, новые сверху | |
-| `POST /api/admin/battles` | `{title, theme, round_seconds, freeze_seconds, auto_advance}` | `AdminBattle` | 422 `validation` |
+| `POST /api/admin/battles` | `{title, theme, round_seconds, freeze_seconds, auto_advance, mode?}` (`mode` по умолчанию `"duel"`) | `AdminBattle` | 422 `validation` |
 | `GET /api/admin/battles/{id}` | | `AdminBattle` | 404 |
 | `POST /api/admin/battles/{id}/photos` | multipart: `file`, `caption` (необязательно) | `Photo` | 400 `bad_image`, 413 `too_large`, 409 `not_draft`, 409 `too_many_photos` |
 | `DELETE /api/admin/battles/{id}/photos/{photo_id}` | | `{"ok": true}` | 409 `not_draft` |
@@ -108,7 +114,31 @@ interface AdminBattle extends Battle {
   photos: Photo[];           // caption всегда заполнен как есть
   bracket: Bracket;          // счёт всегда виден; пустой у draft
   voters: number;            // сколько зрителей вошло
+  swipers: number;           // свайпы: сколько гостей уже голосовало
+  standings: Standing[];     // свайпы: живой счёт, только админу; пустой у дуэлей
 }
+
+interface Standing { photo: Photo; likes: number; dislikes: number; rank: number }
+```
+
+## Свайпы
+
+Режим `swipe`: гости по QR присылают своё фото с именем, потом каждый свайпает чужие фото: вправо «да», влево «нет». Победитель тот, у кого больше «да»; при равенстве выше тот, у кого меньше «нет»; одинаковый счёт делит место.
+
+Ход: `start` открывает приём фото (`phase = "collecting"`, фото не обязательны) → `start-voting` (нужно 2 фото) запускает одно голосование на `round_seconds` (`phase = "voting"`, `current_round = total_rounds = 1`) → по времени или `finish-round {"round": 1}` батл `finished`. `freeze_seconds` и `auto_advance` не используются.
+
+| Метод и путь | Тело | Ответ | Ошибки |
+| --- | --- | --- | --- |
+| `POST /api/battles/{id}/my-photo` | multipart: `file`, `name` (1..80) | `Photo`; повторная загрузка заменяет фото гостя | 401 `not_joined`, 409 `collecting_closed`, 409 `too_many_photos` (200), 400 `bad_image`, 413 `too_large`, 404 у дуэлей |
+| `DELETE /api/battles/{id}/my-photo` | | `{"ok": true}` | 409 `collecting_closed`, 404 |
+| `GET /api/battles/{id}/deck` | | `{"photos": Photo[], "total": n}`: ещё не оценённые фото без своего, у каждого гостя свой порядок; вне голосования пусто | 401 `not_joined`, 404 у дуэлей |
+| `POST /api/photos/{id}/swipe` | `{"liked": true}` | `{"ok": true}` | 401 `not_joined`, 403 `own_photo`, 409 `already_swiped`, 409 `voting_closed` |
+| `GET /api/battles/{id}/standings` | | `{"entries": Standing[]}` | 409 `not_finished` (до конца счёт не отдаётся) |
+| `POST /api/admin/battles/{id}/start-voting` | | `AdminBattle` | 409 `not_collecting`, 409 `not_enough_photos` |
+
+Админ загружает и удаляет фото в черновике и во время приёма фото. `photos/{id}/remove` во время голосования снимает фото из колоды и итогов.
+
+```ts
 ```
 
 ## Правила, которые реализует бэкенд

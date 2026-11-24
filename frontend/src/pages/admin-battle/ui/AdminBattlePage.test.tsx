@@ -121,6 +121,7 @@ describe('AdminBattlePage', () => {
       'href',
       generatePath(routePaths.screen, { battleId: '1' }),
     );
+    expect(screen.getByRole('link', { name: 'Экран зала' })).toHaveAttribute('target', '_blank');
     expect(within(screen.getByTestId('match-11')).getByText('7')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Снять фото' })).toHaveLength(4);
   });

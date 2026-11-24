@@ -39,7 +39,7 @@ function BattleList() {
             <div className="min-w-0 flex-1">
               <p className="truncate font-semibold">{battle.title}</p>
               <p className="truncate text-sm text-muted">
-                {statusLabels[battle.status]}. Фото: {battle.photo_count}. {dateFormat.format(new Date(battle.created_at))}
+                {battle.mode === 'swipe' ? 'Свайпы' : 'Дуэли'}. {statusLabels[battle.status]}. Фото: {battle.photo_count}. {dateFormat.format(new Date(battle.created_at))}
               </p>
             </div>
             <ChevronRight aria-hidden className="text-muted" />

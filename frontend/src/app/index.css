@@ -72,3 +72,157 @@ h2 {
   font-family: var(--font-display);
   letter-spacing: -0.01em;
 }
+
+/* Swipe battles. The first card nudges sideways once to show that it can be dragged. */
+@keyframes nudge {
+  0%,
+  100% {
+    transform: translateX(0) rotate(0);
+  }
+  25% {
+    transform: translateX(-28px) rotate(-3deg);
+  }
+  65% {
+    transform: translateX(28px) rotate(3deg);
+  }
+}
+
+/* A counter jumps a little each time it grows during the vote count. */
+@keyframes pop {
+  0% {
+    transform: scale(1.35);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes rise {
+  0% {
+    opacity: 0;
+    transform: translateY(24px) scale(0.92);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Confetti pieces fly out from the winner card in the direction set by --angle. */
+@keyframes burst {
+  0% {
+    opacity: 1;
+    transform: rotate(var(--angle)) translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(var(--angle)) translateY(calc(var(--reach) * -1)) scale(0.4);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}
+
+/*
+ * Swipe battles look like a dating app: white screen, pink-to-orange gradient, soft shadows,
+ * round white action buttons. Same tokens, other values, so shared components follow along.
+ */
+.theme-swipe {
+  --color-canvas: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface-hover: #f5f6f8;
+  --color-sunken: #eef0f3;
+  --color-line: #e9ebee;
+  --color-line-strong: #e3e5e9;
+  --color-fg: #21262e;
+  --color-muted: #7c8591;
+  --color-primary: #fd267a;
+  --color-primary-hover: #e9196b;
+  --color-primary-soft: #ffe4ee;
+  --color-on-primary: #ffffff;
+  --color-accent: #ff6036;
+  --color-accent-hover: #f24e22;
+  --color-success: #1ec97a;
+  --color-danger: #ff4458;
+  --color-danger-soft: #ffe6e9;
+  --font-display: 'Golos Text Variable', system-ui, sans-serif;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 22px;
+  --gradient-brand: linear-gradient(45deg, #fd267a 0%, #ff6036 100%);
+  --shadow-soft: 0 2px 18px rgb(33 38 46 / 0.12);
+  background-color: var(--color-canvas);
+  background-image: none;
+  color: var(--color-fg);
+}
+
+/* The projector keeps the same look on a dark screen. */
+.theme-swipe.theme-hall {
+  --color-canvas: #111418;
+  --color-surface: #21262e;
+  --color-surface-hover: #2a3038;
+  --color-sunken: #0b0d10;
+  --color-line: #2f353e;
+  --color-line-strong: #3a414b;
+  --color-fg: #ffffff;
+  --color-muted: #9aa3ae;
+  --color-primary-soft: #3b1426;
+  --shadow-soft: 0 4px 28px rgb(0 0 0 / 0.5);
+}
+
+.theme-swipe h1,
+.theme-swipe h2 {
+  font-family: var(--font-sans);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.theme-swipe .shadow-hard,
+.theme-swipe .shadow-hard-sm {
+  box-shadow: var(--shadow-soft);
+}
+
+/* Buttons become pills: gradient for the main action, white with a thin line for the rest. */
+.theme-swipe [data-button] {
+  border-radius: 9999px;
+  border-color: var(--color-line);
+  box-shadow: var(--shadow-soft);
+}
+
+.theme-swipe [data-button='primary'] {
+  border-color: transparent;
+  background-image: var(--gradient-brand);
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.bg-brand {
+  background-image: var(--gradient-brand);
+}
+
+.text-brand {
+  background-image: var(--gradient-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Rings spread from the photo while the guest waits, like a search for people nearby. */
+@keyframes ping-ring {
+  0% {
+    opacity: 0.55;
+    transform: scale(0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.9);
+  }
+}

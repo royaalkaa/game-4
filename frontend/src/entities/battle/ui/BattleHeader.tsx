@@ -10,15 +10,22 @@ interface BattleHeaderProps {
 }
 
 export function BattleHeader({ battle, offsetMs, large = false }: BattleHeaderProps) {
+  const swipe = battle.mode === 'swipe';
   const active = battle.status === 'active' && battle.current_round !== null;
+  const pill = swipe
+    ? battle.phase === 'collecting'
+      ? 'Приём фото'
+      : 'Голосование'
+    : `Раунд ${battle.current_round} из ${battle.total_rounds}`;
+  const showPill = battle.status === 'active' && (swipe ? battle.phase !== null : active);
   return (
     <header className="flex flex-col gap-1">
       <h1 className={large ? 'text-6xl font-bold leading-tight' : 'text-2xl font-bold leading-tight'}>{battle.title}</h1>
       {battle.theme && <p className={large ? 'text-3xl text-muted' : 'text-muted'}>Тема: {battle.theme}</p>}
       <div className={`flex flex-wrap items-center gap-x-4 gap-y-1 ${large ? 'mt-4 text-4xl' : 'mt-1 text-base'}`}>
-        {active ? (
+        {showPill ? (
           <span className="rounded-md border-2 border-line-strong bg-primary px-2 py-0.5 font-semibold text-on-primary">
-            Раунд {battle.current_round} из {battle.total_rounds}
+            {pill}
           </span>
         ) : (
           <span className="font-medium">{statusLabels[battle.status]}</span>

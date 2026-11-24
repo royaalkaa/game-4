@@ -3,11 +3,12 @@ import { useParams } from 'react-router';
 import { EyeOff, Trophy } from 'lucide-react';
 import { apiUrl } from '@/shared/api';
 import { HALL_POLL_MS, QR_REFRESH_MS, routePaths } from '@/shared/config';
-import { clockOffsetMs, useNow, usePolling } from '@/shared/lib';
+import { clockOffsetMs, useBackdrop, useNow, usePolling } from '@/shared/lib';
 import { ButtonLink, PhotoFrame, StaleBanner, StateView } from '@/shared/ui';
 import { BattleHeader, getAdminBattle } from '@/entities/battle';
 import { DuelTile } from './DuelTile';
 import { JoinLinkText } from './JoinLinkText';
+import { SwipeHall } from './SwipeHall';
 
 function Hall({ children }: { children: ReactNode }) {
   return <div className="theme-hall min-h-screen bg-canvas p-10 text-fg">{children}</div>;
@@ -20,6 +21,7 @@ export function ScreenPage() {
     return { battle, offsetMs: clockOffsetMs(battle.server_time, Date.now()) };
   }, [battleId]);
   const { data, error } = usePolling(load, HALL_POLL_MS);
+  useBackdrop(data?.battle.background_url);
   const qrStamp = useNow(QR_REFRESH_MS);
 
   if (!data) {
@@ -59,6 +61,16 @@ export function ScreenPage() {
   }
 
   const { battle, offsetMs } = data;
+  const qrSrc = `${apiUrl('adminQr', { battleId })}?${new URLSearchParams({ t: String(qrStamp) }).toString()}`;
+
+  if (battle.mode === 'swipe' && (battle.status === 'finished' || battle.status === 'active')) {
+    return (
+      <div className="theme-hall theme-swipe min-h-screen bg-canvas p-10 text-fg">
+        {error && <StaleBanner message={error.message} />}
+        <SwipeHall battle={battle} battleId={battleId} offsetMs={offsetMs} qrSrc={qrSrc} />
+      </div>
+    );
+  }
 
   if (battle.status === 'finished' && battle.winner) {
     return (
@@ -91,7 +103,6 @@ export function ScreenPage() {
       .find((entry) => entry.round === battle.current_round)
       ?.matches.filter((match) => match.photo_b !== null) ?? [];
   const isBreak = battle.round_state === 'break';
-  const qrSrc = `${apiUrl('adminQr', { battleId })}?${new URLSearchParams({ t: String(qrStamp) }).toString()}`;
 
   return (
     <Hall>

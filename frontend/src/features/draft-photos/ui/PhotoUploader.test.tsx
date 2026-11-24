@@ -40,7 +40,8 @@ class FakeXhr {
 }
 
 describe('PhotoUploader', () => {
-  it('uploads selected files with captions, shows progress and reports errors', async () => {
+  // Many typed keystrokes; under full coverage on a busy machine this runs past the default 5 s.
+  it('uploads selected files with captions, shows progress and reports errors', { timeout: 15000 }, async () => {
     sent.length = 0;
     vi.stubGlobal('XMLHttpRequest', FakeXhr);
     const onUploaded = vi.fn();

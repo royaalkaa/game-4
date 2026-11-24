@@ -111,3 +111,7 @@ def join(guest_client: TestClient, admin_client: TestClient, battle_id: int) -> 
 def active_matches(client: TestClient, battle_id: int) -> list[dict]:
     rounds = client.get(f"/api/admin/battles/{battle_id}").json()["bracket"]["rounds"]
     return [m for r in rounds for m in r["matches"] if m["status"] == "active"]
+
+
+def error_code_of(response: Response) -> str:
+    return response.json()["error"]["code"]

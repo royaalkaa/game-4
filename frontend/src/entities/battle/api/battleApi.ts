@@ -5,6 +5,7 @@ import {
   type AdminBattleSummary,
   type Battle,
   type Bracket,
+  type Standing,
 } from '@/shared/api';
 
 export function getBattle(battleId: string): Promise<Battle> {
@@ -30,4 +31,8 @@ export interface JoinLink {
 
 export function getJoinLink(battleId: string): Promise<JoinLink> {
   return request<JoinLink>(apiUrl('adminJoinLink', { battleId }));
+}
+
+export function getStandings(battleId: string): Promise<{ entries: Standing[] }> {
+  return request<{ entries: Standing[] }>(apiUrl('standings', { battleId }));
 }

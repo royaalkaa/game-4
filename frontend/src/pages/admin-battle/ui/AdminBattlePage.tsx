@@ -8,6 +8,8 @@ import { BattleHeader, getAdminBattle } from '@/entities/battle';
 import { ActionButton, finishRound, nextRound, removePhoto, startBattle, stopBattle } from '@/features/battle-controls';
 import { DraftPhotoGrid, PhotoUploader } from '@/features/draft-photos';
 import { BracketView } from '@/widgets/bracket';
+import { BackgroundPicker } from '@/features/battle-background';
+import { SwipeAdmin } from './SwipeAdmin';
 
 export function AdminBattlePage() {
   const { battleId = '' } = useParams();
@@ -54,6 +56,22 @@ export function AdminBattlePage() {
   const { battle, offsetMs } = data;
   const active = battle.status === 'active';
   const runningRound = battle.round_state === 'running' ? battle.current_round : null;
+
+  if (battle.mode === 'swipe') {
+    return (
+      <Page wide>
+        {backLink}
+        <BattleHeader battle={battle} offsetMs={offsetMs} />
+        {error && (
+          <p role="alert" className="text-danger">
+            {error.message}
+          </p>
+        )}
+        <SwipeAdmin battle={battle} battleId={battleId} refresh={refresh} />
+        <BackgroundPicker battle={battle} battleId={battleId} refresh={refresh} />
+      </Page>
+    );
+  }
 
   return (
     <Page wide>
@@ -122,7 +140,7 @@ export function AdminBattlePage() {
                 onDone={refresh}
               />
             )}
-            <ButtonLink to={generatePath(routePaths.screen, { battleId })}>
+            <ButtonLink to={generatePath(routePaths.screen, { battleId })} target="_blank" rel="noopener">
               <MonitorPlay aria-hidden size={18} />
               Экран зала
             </ButtonLink>
@@ -166,6 +184,7 @@ export function AdminBattlePage() {
           />
         </section>
       )}
+      <BackgroundPicker battle={battle} battleId={battleId} refresh={refresh} />
     </Page>
   );
 }

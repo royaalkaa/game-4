@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { generatePath, useParams } from 'react-router';
 import { ArrowLeft } from 'lucide-react';
 import { routePaths, VOTER_POLL_MS } from '@/shared/config';
-import { clockOffsetMs, usePolling } from '@/shared/lib';
+import { clockOffsetMs, useBackdrop, usePolling } from '@/shared/lib';
 import { Button, ButtonLink, Page, StaleBanner, StateView } from '@/shared/ui';
 import { BattleHeader, getBattle, getBracket } from '@/entities/battle';
 import { BracketView } from '@/widgets/bracket';
@@ -14,6 +14,7 @@ export function BracketPage() {
     return { battle, bracket, offsetMs: clockOffsetMs(battle.server_time, Date.now()) };
   }, [battleId]);
   const { data, error, refresh } = usePolling(load, VOTER_POLL_MS);
+  useBackdrop(data?.battle.background_url);
 
   if (!data) {
     if (error?.code === 'not_found') return <StateView kind="empty" title="Батл не найден" />;
